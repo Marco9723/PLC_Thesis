@@ -4,13 +4,12 @@ class CONFIG:
     class TRAIN:
         batch_size = 20  # number of audio files per batch
         lr = 1e-4  # learning rate
-        epochs = 100  # training epochs
+        epochs = 150  # training epochs   
         workers = 8  # number of dataloader workers
         val_split = 0.1  # validation set percentage
         clipping_val = 1.0  # gradient clipping value
         patience = 3  # learning rate scheduler's patience
         factor = 0.5  # learning rate reduction factor
-        past_predictions = 0
 
     class NN_MODEL:
         enc_layers = 4  # number of MLP blocks in the encoder
@@ -18,7 +17,7 @@ class CONFIG:
         enc_dim = 768  # dimension of the MLP blocks
         pred_dim = 512  # dimension of the LSTM in the predictor  
         pred_layers = 1  # number of LSTM layers in the predictor
-        num_valid_nn_packets = 7 # SOLO IN PARCNET.PY PER ORA
+        num_valid_nn_packets = 7 
         gradient_clip = 2.0
         max_epochs = 150
         xfade_len_in = 16
@@ -26,7 +25,7 @@ class CONFIG:
     class AR_MODEL:
         ar_order = 128
         diagonal_load = 0.001
-        num_valid_ar_packets = 10 # SOLO IN PARCNET.PY PER ORA
+        num_valid_ar_packets = 7  
 
     class DATA:
         dataset = 'vctk'  
@@ -42,19 +41,19 @@ class CONFIG:
 
         class TRAIN:
             packet_size = 320      # packet sizes for training. All sizes should be divisible by 'audio_chunk_len'
-            context_length = 7     # <-------- 10  per adesso fatto sempre con entrambi 7
-            signal_packets = 8     # <-------- 11
-            fadeout = 80           # 320
+            context_length = 7    
+            signal_packets = 8     
+            fadeout = 80          
             padding = 240
 
         class EVAL:
-            packet_size = 320  # 20ms
-            fadeout = 80       # 320  
+            packet_size = 320  
+            fadeout = 80        
             padding = 240
 
     class LOG:
-        # log_dir = 'lightning_logs'  # checkpoint and log directory
-        sample_path = 'audio_samples'  # path to save generated audio samples in evaluation.
+        log_dir = 'lightning_logs'
+        sample_path = 'audio_samples' 
         log_dir = 'lightning_logs'
 
 
