@@ -39,8 +39,6 @@ class PLCModel(pl.LightningModule):
         self.val_dataset = val_dataset
         self.stoi = STOI(48000)
         self.pesq = PESQ(16000, 'wb')
-        # usare num_epochs per capire quante predizioni future fare?
-        
 
         self.predictor = Predictor(window_size=self.window_size, lstm_dim=self.pred_dim,
                                        lstm_layers=self.pred_layers)
@@ -86,50 +84,40 @@ class PLCModel(pl.LightningModule):
     
     def train_dataloader(self):               
         return DataLoader(self.train_dataset, shuffle=False, batch_size=self.hparams.batch_size,
-                          num_workers=CONFIG.TRAIN.workers, persistent_workers=True)                            # previous_predictions= self.previous_predictions)    # oppure basta passargli solo self.previous_predictions
-                                                                                                                # self.train_dataset.update_data(self.previous_predictions)    
+                          num_workers=CONFIG.TRAIN.workers, persistent_workers=True)                            
+                                                                                                                    
     def val_dataloader(self):
         return DataLoader(self.val_dataset, shuffle=False, batch_size=self.hparams.batch_size,
                           num_workers=CONFIG.TRAIN.workers, persistent_workers=True)        
 
-    def training_step(self, batch, batch_idx):
-                                                                                                                # automaticamente tutti tensori quelli provenienti da batch # ogni elemento della batch contiene cose relative allo stesso dato
-        ar_past, nn_past, target, packet_size = batch                                                           # target 1 packet in time formato tensore, ar_past 7 Numpy array, nn_past self.forward(past) = 7 + 1 a zero da predirre (torch stft format)
-                                                                                                                # dimensioni [batch_size, channels, ...]
-                                                                                                                # in realtà target potrebbe essere 1 solo pacchetto nel nostro caso    <-----
-                                                                                                                # ar_past[batch_size, context_lenght]
-        teacher_forcing_prob = max(0, 1 - self.trainer.current_epoch/self.num_epochs)                           # teacher forcing probability
+    def training_step(self, batch, batch_idx):                                                                                                           
+        ar_past, nn_past, target, packet_size = batch                                                           
+                                                                                                                                                                                                                                                                                                          
+        teacher_forcing_prob = max(0, 1 - self.trainer.current_epoch/self.num_epochs)                           
         
-        f_0 = nn_past[:, :, 0:1, :]                                                                             # nn_past torch tensor stft
+        f_0 = nn_past[:, :, 0:1, :]                                                                            
         nn_input = nn_past[:, :, 1:, :]
-        nn_pred = self(nn_input)                                                                                # predizione
+        nn_pred = self(nn_input)                                                                             
         nn_pred = torch.cat([f_0, nn_pred], dim=2)  
-        nn_pred = torch.view_as_complex(nn_pred.permute(0, 2, 3, 1).contiguous())                               # riporta in time
-        nn_pred = torch.istft(nn_pred, self.window_size, self.hop_size, window=self.window)                     # 8 packets, ricostruisce tutto il segnale residuo
-        nn_pred = nn_pred[:,:,-(packet_size+80):]       #no                                                        # estrai residuo dell'ultimo pacchetto predetto (vedi questione + 80)
-        nn_pred = nn_pred.squeeze(dim=1)                                                                        # La forma risultante non cambierà per gli esempi in cui channels è già 1                                    # mantieni batch_size, channel = 1
+        nn_pred = torch.view_as_complex(nn_pred.permute(0, 2, 3, 1).contiguous())                               
+        nn_pred = torch.istft(nn_pred, self.window_size, self.hop_size, window=self.window)                    
+        nn_pred = nn_pred[:,:,-(packet_size+80):]                                                                  
+        nn_pred = nn_pred.squeeze(dim=1)                                                                        
          
-        ar_pred=[]                                          # nn_pred tensore [batch_size, channels, time] in teoria con channels = 1 (funziona solo se channel = 1), dopo riga precedente [batch_size, time], ma vedi se channel serve oppure no, ho preso però l'ultimo pezzo                                                
-        for past in ar_past.cpu().numpy():                                                                                                         # se ar_past è un tensore con dimensioni [batch_size, ar_past_length] dovrebbe funzionare
-            ar_pred.append(self.ar_model.predict(past, packet_size+80))                                        # la predizione è l'ultimo pacchetto lungo PACKET_DIM+80, formato NumPy array
-                                                                                                                # ar_past dovrebbe essere un tensore [batch_size, ar_past_length]
-        ar_pred=torch.tensor(np.array(ar_pred))                                                                                                        # ar_past.numpy(), converte in una matrice numpy [batch_size, ar_past_length]
-                                                                                             # NECESSARIA, per riconvertire in tensore
-                                                                                                                # ar_pred dovrebbe avere le stesse dimensioni di nn_pred a questo punto  (se no al max fai un ciclo for)
+        ar_pred=[]                                                                                         
+        for past in ar_past.cpu().numpy():                                                                                                         
+            ar_pred.append(self.ar_model.predict(past, packet_size+80))                                      
+                                                                                                
+        ar_pred=torch.tensor(np.array(ar_pred))                                                                                                    
+                                                                            
         pred = nn_pred + ar_pred                                                              
-        target = target.squeeze(dim=1)                                                                          # dipende se channel = 1 o se non c'è   # TARGET DOVREBBE CONTENERE IL TARGET GIUSTO
-                                                                                                                # target meglio che sia lungo solo 1 pacchetto direi, target tensore in time di dimensioni [batch_size, channel=1, time]
-                                                                                                                # per ogni batch salverei il tensore [batch_size, pred_length]
-        if torch.rand(1) < teacher_forcing_prob:    
-            output = target                                                                                     # così non salvi durante il training!
-        else:
-            output = pred                                                                                       # QUELLO CHE SALVI è UN TENSORE [batch_size, predizione]
-            
-                                                                                                                # METTERE QUELLO FATTO SOPRA NEL BRANCH ELSE?
-                                                                                                                # se serve .numpy() x convertire da tensore a matrice numpy nel nostro caso 2D
+        target = target.squeeze(dim=1)                                                   
         
-                                                                                              # parcnet loss ha bisogno di squeeze lungo la dimensione di channel ()= 1): nn_pred fatto, ar_pred dovrebbe avere stesse dimensioni
-                                                                                              # target anche in teoria, assicuratene  -->  dovrebbe essere giusto avere tutto di dimensione [batch_size, predizione]
+        if torch.rand(1) < teacher_forcing_prob:    
+            output = target                                                                                   
+        else:
+            output = pred                                                                                      
+                                                                                
         mse_loss = self.mse_loss(output, target)   
         sc_loss, log_loss = self.stft_loss(y_pred=output.squeeze(1), y_true=target.squeeze(1))
         spectral_loss = 0.5 * (sc_loss + log_loss)
@@ -143,7 +131,7 @@ class PLCModel(pl.LightningModule):
 
         return {'loss': tot_loss, 'training_output': output}     
  
-    def training_epoch_end(self, outputs):                                                    # così lo fai alla fine dopo tutti i training step e non vai a influire sul training!
+    def training_epoch_end(self, outputs):                                                  
         predictions = [output['training_output'] for output in outputs]   
 
         if self.train_dataset.previous_predictions is None:
@@ -153,9 +141,6 @@ class PLCModel(pl.LightningModule):
             self.train_dataset.previous_predictions = torch.cat([self.train_dataset.previous_predictions, predictions[-1]], dim=0)
 
     def validation_step(self, val_batch, batch_idx):
-        # valutazione della performance, forward pass, calcolo loss, calcolare metriche come accuratezza e precisione (opzionale), ma no backward pass e ottimizzazione
-        # si esegue solo il forward pass per ottenere le predizioni e calcolare la loss
-        # vedi val_dataset
         ar_past, nn_past, target, packet_size = val_batch                                        
                                                                                                                                                                           
         teacher_forcing_prob = max(0, 1 - self.trainer.current_epoch/self.num_epochs)         
@@ -189,15 +174,6 @@ class PLCModel(pl.LightningModule):
 
         return
     
-    
-    def test_step(self, test_batch, batch_idx):
-
-           return
-    
-    def predict_step(self, batch, batch_idx: int, dataloader_idx: int = 0):
-            # parcnet= PARCnet(...)
-            # y_pred = parcnet(y_lost, trace)
-            return
     
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
