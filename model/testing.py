@@ -11,24 +11,16 @@ from utils import LSD
 import torch
 import sys
 from speechmos import plcmos
-sys.path.append("C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI")
-from CODE.PLCmos.plc_mos import PLCMOSEstimator
+from PLCmos.plc_mos import PLCMOSEstimator
 import numpy as np
 
 plc_mos = PLCMOSEstimator()
 
 def main():
 
-    # MIGLIOR FINE TUNING (somma errata), RIFORMATTATO CON FORMAT.PY, AR=NN=7, AR_ORDER=128:
-    # model_checkpoint = "C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/CODE/fine_tuning/lightning_logs/version_86/frn-epoch=89-val_loss=-9.6633.ckpt"
-    # model_checkpoint = "C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/CODE/fine_tuning/lightning_logs/version_69/checkpoints/format-parcnet-epoch=64-val_loss=-9.3397.ckpt"
-    model_checkpoint = "C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/CODE/fine_tuning/format_fine_tuned.ckpt"
-    # MIGLIOR TRAINING, AR=NN=7, AR_ORDER=128:
-    # model_checkpoint = "C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/CODE/lightning_logs/version_271/checkpoints/frn-epoch=126-val_loss=-8.9949.ckpt"
-    # model_checkpoint = "C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/CODE/lightning_logs/version_277/checkpoints/frn-epoch=66-val_loss=-8.5957.ckpt"
-
-    audio_test_folder = Path("C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/data/val_clean_v2")
-    trace_folder = Path("C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/data/traces_v2")
+    model_checkpoint = "../frn-epoch=89-val_loss=-9.6633.ckpt"
+    audio_test_folder = Path("../data/val_clean_v2")
+    trace_folder = Path("../data/traces_v2")
     
     # Read global params from config file
     sr = CONFIG.DATA.sr                        # 48000
@@ -39,7 +31,7 @@ def main():
     # Read AR params from config file
     ar_order = CONFIG.AR_MODEL.ar_order                           # 128 
     diagonal_load = CONFIG.AR_MODEL.diagonal_load                 # 0.001
-    num_valid_ar_packets = CONFIG.AR_MODEL.num_valid_ar_packets   # 10  
+    num_valid_ar_packets = CONFIG.AR_MODEL.num_valid_ar_packets   # 7
 
     # Read NN params from config file
     num_valid_nn_packets = CONFIG.NN_MODEL.num_valid_nn_packets   # 7
@@ -72,10 +64,7 @@ def main():
     speechmos_list = []
     index = 0
     
-    # for index, audio_test_path in enumerate(audio_test_folder.glob(audio_format)):
     for audio_test_path in audio_test_folder.glob(audio_format): 
-        # if index < 497:
-        #     continue
         file = os.path.basename(audio_test_path)
         file_name = os.path.splitext(file)[0]
         
@@ -90,7 +79,7 @@ def main():
         y_ref, sr = librosa.load(audio_test_path, sr=sr, mono=True)
 
         # Simulate packet losses 
-        y_lost = simulate_packet_loss(y_ref, trace, packet_dim)   # packet dim = 320, il + 80 fatto dopo con fadeout (prima era extra_dim)
+        y_lost = simulate_packet_loss(y_ref, trace, packet_dim)  
 
         # Predict using PARCnet
         y_pred = parcnet(y_lost, trace)
@@ -133,21 +122,13 @@ def main():
         print(metrics)
         
         intrusive_list.append(ret)
-        non_intrusive_list.append(ret)
         lsd_list.append(lsd)
         stoi_list.append(stoi)
         pesq_list.append(pesq)
         speechmos_list.append(plcmos_v2_value)
-        
-        if index % 100 == 0:
-            mean = sum(intrusive_list) / len(intrusive_list) if len(intrusive_list) > 0 else 0
-            print('PLCMOS:', mean)
-        
-        index = index + 1
             
             
     intrusive_mean = sum(intrusive_list) / len(intrusive_list) if len(intrusive_list) > 0 else 0
-    # non_intrusive_mean = sum(non_intrusive_list) / len(non_intrusive_list) if len(non_intrusive_list) > 0 else 0
     lsd_mean = sum(lsd_list) / len(lsd_list) if len(lsd_list) > 0 else 0
     stoi_mean = sum(stoi_list) / len(stoi_list) if len(stoi_list) > 0 else 0
     pesq_mean = sum(pesq_list) / len(pesq_list) if len(pesq_list) > 0 else 0
