@@ -6,9 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from copy import deepcopy
-sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
-#from CODE.config import CONFIG    #  + CANCELLARE FUNZIONI MAI UTILIZZATE !!!
 from config import CONFIG
+sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
 
 def mkdir_p(mypath):
     """Creates a directory. equivalent to using mkdir -p on the command line"""
@@ -90,14 +89,3 @@ def simulate_packet_loss(y_ref: np.ndarray, trace: np.ndarray, packet_dim: int) 
             y_lost[idx: idx + packet_dim] = 0.
 
     return y_lost
-
-def similarity_index(original_signal, reconstructed_signal):
-    numerator = 2 * np.sum(original_signal * reconstructed_signal)
-    denominator = np.sum(original_signal**2) + np.sum(reconstructed_signal**2)
-    si = numerator / denominator
-    return si
-
-def relative_error(original_signal, reconstructed_signal):
-    abs_difference = np.abs(original_signal - reconstructed_signal)
-    relative_error_percentage = (np.sum(abs_difference) / np.sum(np.abs(original_signal))) * 100
-    return relative_error_percentage
