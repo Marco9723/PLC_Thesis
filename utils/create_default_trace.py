@@ -6,12 +6,6 @@ import argparse
 import numpy as np
 from pathlib import Path
 
-# To generalize the inference mechanism, we use traces. A trace is a np.ndarray containing a binary sequence of 1s and 0s. 
-# A 1 indicate a packet loss, whereas a 0 indicate that the corresponding packet was correctly received (valid packet). 
-# We provide a script to create default traces, i.e., traces with evenly-spaced losses; see parcnet/create_default_trace.py. 
-# Traces depend on the chosen sampling frequency and packet size. 
-# If you wish to modify global or path parameters in config.yaml, please run create_default_trace.py after the changes have been made.
-
 def create_trace(loss_rate: int) -> None:
     # ----------- Read config.yaml ----------- #
 
