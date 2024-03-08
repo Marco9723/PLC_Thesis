@@ -1,0 +1,37 @@
+UPPER BOUND (DATI VERSIONE 2):
+plcmos_mean: 4.474238122701645
+lsd_mean: 0.00010000074129493442
+stoi_mean: 1.
+pesq_mean: 4.51414837497361                          
+speechmos_mean: 4.23102514531215
+
+LOWER BOUND (DATI VERSIONE 2):
+plcmos_mean: 2.814956334158778
+lsd_mean: 3.7102528802245343
+stoi_mean: 0.7773593872047912                      
+pesq_mean: 1.9264928010106086                      
+speechmos_mean: 2.5197759691178825
+
+FRN (DATI VERSIONE 2) 
+PLCMOS: 2.5392508506774902				   
+LSD: 2.1244513988494873
+PESQ: 2.080951452255249                                  					
+STOI: 0.8547618985176086                                 
+Speechmos: 2.809677839279175
+
+MODELLO  (DATI VERSIONE 2)
+model_checkpoint = "../frn-epoch=66-val_loss=-8.5957.ckpt"
+plcmos_mean: 2.721223575249314 
+lsd_mean: 2.327459375964054 
+stoi_mean: 0.811983648046582
+pesq_mean: 2.009122833346209
+speechmos_mean: 2.887657443404197 
+
+intrusive_stdev: 1.0673933160566655
+lsd_stdev: 1.2753158039475832
+stoi_stdev: 0.1599185977392045
+pesq_stdev: 1.0106453112087402
+speechmos_stdev: 0.985909879566753
+
+FINE TUNING (DATI VERSIONE 2):
+...
