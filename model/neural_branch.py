@@ -7,20 +7,12 @@ from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility as STOI
 import torch.nn.functional as F
 import numpy as np
 import sys
-sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
-
-from CODE.config import CONFIG
-import CODE.metr
-from CODE.config import CONFIG
-from CODE.blocks import Encoder, Predictor
-from CODE.ar_branch import ARModel
-from CODE.parcnet_loss import MultiResolutionSTFTLoss
-
-'''import metr
+import metr
 from config import CONFIG
 from blocks import Encoder, Predictor
 from ar_branch import ARModel
-from parcnet_loss import MultiResolutionSTFTLoss'''
+from parcnet_loss import MultiResolutionSTFTLoss
+sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
 
 
 class PLCModel(pl.LightningModule):
@@ -64,7 +56,7 @@ class PLCModel(pl.LightningModule):
         self.encoder = Encoder(in_dim=self.window_size, dim=self.enc_in_dim, depth=self.enc_layers,
                                mlp_dim=self.enc_dim)
 
-        self.window = torch.sqrt(torch.hann_window(self.window_size))   # .to('cuda:0')  # <----------
+        self.window = torch.sqrt(torch.hann_window(self.window_size)).to('cuda:0')  
         self.save_hyperparameters('window_size', 'enc_layers', 'enc_in_dim', 'enc_dim', 'pred_dim', 'pred_layers')
         self.mse_loss = F.mse_loss
         self.stft_loss = MultiResolutionSTFTLoss()
@@ -105,6 +97,7 @@ class PLCModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         ar_past, nn_past, target = batch
 
+        context = ar_past
         f_0 = nn_past[:, :, 0:1, :]
         nn_input = nn_past[:, :, 1:, :]
         nn_pred = self(nn_input)
@@ -119,16 +112,20 @@ class PLCModel(pl.LightningModule):
             prediction = self.ar_model.predict(ar_past[i], (self.p_size + self.fadeout + self.padding))
             tmp = np.concatenate((ar_past[i], prediction), axis=None)
             ar_pred.append(tmp)
+            
+        ar_pred = torch.tensor(np.array(ar_pred))
 
-        ar_pred = torch.tensor(np.array(ar_pred))    
-        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')
+        nn_pred = nn_pred[:, 7 * self.p_size:]
+        ar_pred = ar_pred[:, 7 * self.p_size:]
+        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')    # 640
 
-        pred = pred.to(torch.double)     # per metrics
+        pred = torch.cat((context, pred), dim=1)
+        pred = pred.to(torch.double)     
         target = target.to(torch.double)
         
-        mse_loss = self.mse_loss(pred, target)  
+        mse_loss = self.mse_loss(pred, target)
 
-        sc_loss, log_loss = self.stft_loss(y_pred=pred.squeeze(1), y_true=target.squeeze(1))  # NB
+        sc_loss, log_loss = self.stft_loss(y_pred=pred.squeeze(1), y_true=target.squeeze(1))  
         spectral_loss = 0.5 * (sc_loss + log_loss)  
         tot_loss = self.lmbda * mse_loss + spectral_loss  
 
@@ -143,12 +140,13 @@ class PLCModel(pl.LightningModule):
     def validation_step(self, val_batch, batch_idx):
         ar_past, nn_past, target = val_batch
 
+        context = ar_past
         f_0 = nn_past[:, :, 0:1, :]
-        nn_input = nn_past[:, :, 1:, :]   # torch.Size([20, 2, 480, 7]) 
-        nn_pred = self(nn_input)          # torch.Size([20, 2, 480, 7])
-        nn_pred = torch.cat([f_0, nn_pred], dim=2)   # torch.Size([20, 2, 481, 7])
+        nn_input = nn_past[:, :, 1:, :]                                                      # torch.Size([20, 2, 480, 7]) 
+        nn_pred = self(nn_input)                                                             # torch.Size([20, 2, 480, 7])
+        nn_pred = torch.cat([f_0, nn_pred], dim=2)                                           # torch.Size([20, 2, 481, 7])
         nn_pred = torch.view_as_complex(nn_pred.permute(0, 2, 3, 1).contiguous())
-        nn_pred = torch.istft(nn_pred, self.window_size, self.hop_size, window=self.window) # torch.Size([20, 2880])
+        nn_pred = torch.istft(nn_pred, self.window_size, self.hop_size, window=self.window)  # torch.Size([20, 2880])
 
         ar_pred = []
         ar_past = ar_past.cpu().numpy()
@@ -159,11 +157,15 @@ class PLCModel(pl.LightningModule):
             ar_pred.append(tmp)
 
         ar_pred = torch.tensor(np.array(ar_pred))
-        
-        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')  
 
-        val_loss = metr.nmse(y_pred=pred, y_true=target)  # 2880
-        packet_val_loss = metr.nmse(y_pred=pred[..., -(self.p_size + self.fadeout + self.padding):], y_true=target[..., -(self.p_size + self.fadeout + self.padding):])   # ultimi 640
+        nn_pred = nn_pred[:, 7 * self.p_size:]
+        ar_pred = ar_pred[:, 7 * self.p_size:]
+        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')  # 640
+
+        pred = torch.cat((context, pred), dim=1)
+
+        val_loss = metr.nmse(y_pred=pred, y_true=target)    # 2880
+        packet_val_loss = metr.nmse(y_pred=pred[..., -(self.p_size + self.fadeout + self.padding):], y_true=target[..., -(self.p_size + self.fadeout + self.padding):])   # last 640
 
         self.log('val_loss', val_loss)
         self.log('packet_val_loss', packet_val_loss)
