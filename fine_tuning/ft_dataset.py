@@ -2,7 +2,6 @@ import glob
 import os
 import random
 import sys
-sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
 from CODE.config import CONFIG
 import librosa
 import numpy as np
@@ -13,6 +12,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 import torch.nn.functional as F
 from CODE.config import CONFIG
+sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
 
 np.random.seed(0)
 rng = default_rng()
@@ -20,20 +20,12 @@ rng = default_rng()
 def load_audio(
         path,
         sample_rate: int = 16000,
-        chunk_len=None,
+        chunk_len=None
 ):
     with sf.SoundFile(path) as f:
         sr = f.samplerate
-        audio_len = f.frames
-
-        if chunk_len is not None and chunk_len < audio_len:
-            # start_index = torch.randint(0, audio_len - chunk_len, (1,))[0]
-            start_index = 0
-            frames = f._prepare_read(start_index, start_index + chunk_len, -1)
-            audio = f.read(frames, always_2d=True, dtype="float32")
-
-        else:
-            audio = f.read(always_2d=True, dtype="float32")
+        frames = f._prepare_read(0, 0 + chunk_len, -1)
+        audio = f.read(frames, always_2d=True, dtype="float32")
 
     if sr != sample_rate:
         audio = librosa.resample(np.squeeze(audio), orig_sr=sr, target_sr=sample_rate)[:, np.newaxis]
@@ -66,6 +58,7 @@ class TrainDataset(Dataset):
         self.signal_packets = CONFIG.DATA.TRAIN.signal_packets
         self.fadeout = CONFIG.DATA.TRAIN.fadeout
         self.padding = CONFIG.DATA.TRAIN.padding
+        self.audio_index = torch.randint(0, CONFIG.DATA.audio_chunk_len - self.p_size*17, (1,))[0]
         self.previous_predictions = None
         self.current_epoch = 0
         np.random.seed(0)
@@ -86,7 +79,7 @@ class TrainDataset(Dataset):
     def fetch_audio(self, index):
         sig = load_audio(self.data_list[index], sample_rate=self.sr, chunk_len=self.window) 
         while sig.shape[1] < self.window:
-            idx = torch.randint(0, len(self.data_list), (1,))[0]
+            idx = index   
             pad_len = self.window - sig.shape[1]                           
                                                                            
             if pad_len < 0.02 * self.sr:                                   
@@ -98,37 +91,36 @@ class TrainDataset(Dataset):
 
     def __getitem__(self, index):
 
-        if self.previous_predictions is None:  # fino ad ora ar e nn da 7 pacchetti
+        if self.previous_predictions is None:  
             sig = self.fetch_audio(index)
             sig = sig.reshape(-1).astype(np.float32)
-            # if index == 1:
-            #     print(sig)
-            sig = sig[:int((self.signal_packets*self.p_size) + self.fadeout + self.padding)].copy()   # 7 context + 1 da predirre + 1 di padding, all'inizio del segnale
-            target = torch.tensor(sig.copy()).float()     # .float() non necessario  ORIGINALE
-            # target = torch.tensor(sig, dtype=torch.float32)
-            nn_input = torch.tensor(sig[:int(self.p_size*self.context_length)].copy())  # 7  torch.Size([2240])
-            nn_input = torch.cat((nn_input, torch.zeros(int(self.p_size+(self.fadeout+self.padding)))))    # 7 + 1 + 1 torch.Size([2880])
+            sig = sig[self.audio_index:]
+            sig = sig[:int((self.signal_packets*self.p_size) + self.fadeout + self.padding)].copy()        # 7 packets of context + 1 to predict + 1 padding  (2880 samples)
+            target = torch.tensor(sig.copy()).float()
+
+            nn_input = torch.tensor(sig[:int(self.p_size*self.context_length)].copy())                     # 7 packets = 2240 samples
+            nn_input = torch.cat((nn_input, torch.zeros(int(self.p_size+(self.fadeout+self.padding)))))    # 7 + 1 + 1 packets = 2880 samples
             nn_input = torch.stft(nn_input, self.chunk_len, self.stride, window=self.hann, return_complex=False).permute(2, 0, 1).float()
             ar_input = sig[:int(self.p_size*self.context_length)].copy()
-            ar_input = torch.tensor(ar_input.copy()).float()   # .float() necessario????
+            ar_input = torch.tensor(ar_input.copy()).float()  
 
         else:
+            # Fetch signal and target
             sig = self.fetch_audio(index)
             sig = sig.reshape(-1).astype(np.float32)
-            # if index == 1:
-            #     print(sig)
-            # print(self.previous_predictions[index, :].dtype, sig.dtype)
-            pred_length = len(self.previous_predictions[index, :])   # 320, 640, 960, ...
-            sig = sig[int(pred_length):int(pred_length + (self.signal_packets*self.p_size) + self.fadeout + self.padding)].copy()
-            target = torch.tensor(sig.copy()).float() # lungo 9
-            # BISOGNA METTERE IL FADEOUT ?????
-            sig = sig[:-(int(self.p_size+(self.fadeout+self.padding)))]  # 7
+            sig = sig[self.audio_index:]
+            pred_length = len(self.previous_predictions[index, :])   # 320, 640, 960, ... samples
+            sig = sig[int(pred_length):int(pred_length + (self.signal_packets*self.p_size) + self.fadeout + self.padding)].copy()  # 9 packets
+            target = sig[-int(self.p_size + self.fadeout + self.padding):].copy()            
+            sig = sig[:-(int(self.p_size+(self.fadeout+self.padding)))]  # 7 packets
             sig[-min(len(sig), pred_length):] = self.previous_predictions[index,:][-min(len(sig), pred_length):]
-            nn_input = torch.tensor(sig.copy())  # 7
-            nn_input = torch.cat((nn_input, torch.zeros(int(self.p_size+(self.fadeout+self.padding)))))    # 7 + 1 + 1 torch.Size([2880])
+            target = torch.tensor(np.concatenate((sig,target),axis=0))
+
+            # Fetch nn and ar inputs
+            nn_input = torch.tensor(sig.copy())  # 7 packets
+            nn_input = torch.cat((nn_input, torch.zeros(int(self.p_size+(self.fadeout+self.padding)))))    # 7 + 1 + 1 packets = torch.Size([2880])
             nn_input = torch.stft(nn_input, self.chunk_len, self.stride, window=self.hann, return_complex=False).permute(2, 0, 1).float()
             ar_input = sig.copy()
-            ar_input = torch.tensor(ar_input.copy()).float()
-            # print("getitem, dimensioni:", target.size(), nn_input.size(), ar_input.size())
+            ar_input = torch.tensor(ar_input).float()  # 7 packets
 
         return ar_input, nn_input, target
