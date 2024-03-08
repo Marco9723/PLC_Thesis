@@ -93,45 +93,22 @@ class TrainDataset(Dataset):
         return sig
 
     def __getitem__(self, index):
-        # x non creare discontinuità chuck_len<48000 ?
-        sig = self.fetch_audio(index)                           # (1,122880)
-        sig = sig.reshape(-1).astype(np.float32)                # (122880)
+        # Fetch signal and target
+        sig = self.fetch_audio(index)                           
+        sig = sig.reshape(-1).astype(np.float32)                # 122880
         start_index = random.randint(0, len(sig) - (self.signal_packets*self.p_size) - self.fadeout - self.padding)  
-        sig = sig[start_index:int(start_index + (self.signal_packets*self.p_size) + self.fadeout + self.padding)].copy()   # 8 + 1 da 320
+        sig = sig[start_index:int(start_index + (self.signal_packets*self.p_size) + self.fadeout + self.padding)].copy()   # 8 + 1 packets  (320 samples)
         target = torch.tensor(sig.copy()).float() 
-        nn_input = torch.tensor(sig[:int(self.p_size*self.context_length)].copy())  # 7  torch.Size([2240])
-        nn_input = torch.cat((nn_input, torch.zeros(int(self.p_size+(self.fadeout+self.padding)))))    # 7 + 1 + 1 torch.Size([2880])
-        # MULTIPLI DI 960, se no taglia
+
+        # Fetch nn and ar input
+        nn_input = torch.tensor(sig[:int(self.p_size*self.context_length)].copy())                     # 7 packets = 2240 samples
+        nn_input = torch.cat((nn_input, torch.zeros(int(self.p_size+(self.fadeout+self.padding)))))    # 7 + 1 + 1 packets = 2880 samples
         nn_input = torch.stft(nn_input, self.chunk_len, self.stride, window=self.hann, return_complex=False).permute(2, 0, 1).float()
-        ar_input = sig[:int(self.p_size*self.context_length)].copy()   # 7, poi ne predice 2
+        ar_input = sig[:int(self.p_size*self.context_length)].copy()   # 7 packets
         ar_input = torch.tensor(ar_input.copy()).float()
-        # DIMENSIONI: torch.Size([2240]) torch.Size([2, 481, 7]) torch.Size([2880])
+        # torch.Size([2240]) torch.Size([2, 481, 7]) torch.Size([2880])
         return ar_input, nn_input, target
 
 
-    
-
-
-
-
-
-
-
-
-        
-'''original_length_tensor1 = len(ar_input)
-        padded_tensor1 = F.pad(ar_input, (0, max(0, 10752 - original_length_tensor1)), value=0)   # 10752
-
-        original_length_target = len(target)
-        padded_target = F.pad(target, (0, max(0, 1920 - original_length_target)), value=0)        # 1920
-
-        original_length_tensor2 = nn_input.size(2)
-        if nn_input.size(-1) < 27:    # <---------- <original_length_tensor2
-            padding_size = 27 - nn_input.size(-1)
-            padded_tensor2 = F.pad(nn_input, (0, padding_size), value=0)
-        else:
-            padded_tensor2 = nn_input    # (2, 481, 27)
-        # print(padded_tensor1.size(), padded_tensor2.size(), padded_target.size())
-        # print(original_length_tensor1, original_length_tensor2, original_length_target)
         return padded_tensor1, original_length_tensor1, padded_tensor2, original_length_tensor2, padded_target, original_length_target, p_size'''
 
