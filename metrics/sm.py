@@ -8,7 +8,6 @@ def load_file_list(file_path):
     try:
         with open(file_path, 'r') as file:
             for line in file:
-                # Rimuove spazi bianchi e newline dalla fine e aggiunge il nome del file alla lista
                 file_list.append(line.strip())
         #print(file_list)
     except FileNotFoundError:
