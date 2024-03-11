@@ -111,10 +111,10 @@ class TrainDataset(Dataset):
             sig = sig[self.audio_index:]
             pred_length = len(self.previous_predictions[index, :])   # 320, 640, 960, ... samples
             sig = sig[int(pred_length):int(pred_length + (self.signal_packets*self.p_size) + self.fadeout + self.padding)].copy()  # 9 packets
-            target = sig[-int(self.p_size + self.fadeout + self.padding):].copy()            
+            target = torch.tensor(sig.copy()).float()           
             sig = sig[:-(int(self.p_size+(self.fadeout+self.padding)))]  # 7 packets
-            sig[-min(len(sig), pred_length):] = self.previous_predictions[index,:][-min(len(sig), pred_length):]
-            target = torch.tensor(np.concatenate((sig,target),axis=0))
+            # sig[-min(len(sig), pred_length):] = self.previous_predictions[index,:][-min(len(sig), pred_length):]
+            sig[-pred_length:] = self.previous_predictions[index, :]
 
             # Fetch nn and ar inputs
             nn_input = torch.tensor(sig.copy())  # 7 packets
