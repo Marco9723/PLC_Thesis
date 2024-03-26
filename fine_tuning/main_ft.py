@@ -16,6 +16,7 @@ from CODE.tblogger import TensorBoardLoggerExpanded
 from CODE.utils import mkdir_p
 
 pretrained_model = PLCModel.load_from_checkpoint('/nas/home/mviviani/nas/home/mviviani/tesi/CODE/lightning_logs/version_277/checkpoints/frn-epoch=66-val_loss=-8.5957.ckpt')
+pretrained_model.train()
 train_dataset = TrainDataset('train')
 val_dataset = TrainDataset('val')
 
