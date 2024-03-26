@@ -109,5 +109,3 @@ class TrainDataset(Dataset):
         # torch.Size([2240]) torch.Size([2, 481, 7]) torch.Size([2880])
         return ar_input, nn_input, target
 
-
-        return padded_tensor1, original_length_tensor1, padded_tensor2, original_length_tensor2, padded_target, original_length_target, p_size'''
