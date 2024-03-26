@@ -56,7 +56,6 @@ class FinePLCModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         ar_past, nn_past, target = batch
 
-        context = ar_past
         f_0 = nn_past[:, :, 0:1, :]
         nn_input = nn_past[:, :, 1:, :]
         nn_pred = self(nn_input)
@@ -74,11 +73,8 @@ class FinePLCModel(pl.LightningModule):
  
         ar_pred = torch.tensor(np.array(ar_pred))
 
-        nn_pred = nn_pred[:, 7 * self.p_size:]
-        ar_pred = ar_pred[:, 7 * self.p_size:]
         pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')
-        output = pred[:, :self.p_size]   # tensor(20,320)
-        pred = torch.cat((context, pred), dim=1)
+        output = pred[:, 7 * self.p_size: 8 * self.p_size]   # tensor(20,320)
 
         self.train_predictions.append(output) 
 
@@ -112,8 +108,7 @@ class FinePLCModel(pl.LightningModule):
 
     def validation_step(self, val_batch, batch_idx):
         ar_past, nn_past, target = val_batch
-
-        context = ar_past
+        
         f_0 = nn_past[:, :, 0:1, :]
         nn_input = nn_past[:, :, 1:, :]              
         nn_pred = self(nn_input)                     
@@ -131,11 +126,8 @@ class FinePLCModel(pl.LightningModule):
 
         ar_pred = torch.tensor(np.array(ar_pred))            # 9
 
-        nn_pred = nn_pred[:, 7 * self.p_size:]               # 640
-        ar_pred = ar_pred[:, 7 * self.p_size:]               # 640 
-        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')   # 640
-        output = pred[:, :self.p_size]                       # 320   
-        pred = torch.cat((context, pred), dim=1)
+        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')   # 2880
+        output = pred[:, 7 * self.p_size: 8 * self.p_size]   # 320   
 
         self.val_predictions.append(output)
 
