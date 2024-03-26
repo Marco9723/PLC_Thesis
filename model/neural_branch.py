@@ -97,7 +97,6 @@ class PLCModel(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         ar_past, nn_past, target = batch
 
-        context = ar_past
         f_0 = nn_past[:, :, 0:1, :]
         nn_input = nn_past[:, :, 1:, :]
         nn_pred = self(nn_input)
@@ -115,13 +114,10 @@ class PLCModel(pl.LightningModule):
             
         ar_pred = torch.tensor(np.array(ar_pred))
 
-        nn_pred = nn_pred[:, 7 * self.p_size:]
-        ar_pred = ar_pred[:, 7 * self.p_size:]
-        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')    # 640
+        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')    # 2880
 
-        pred = torch.cat((context, pred), dim=1)
-        pred = pred.to(torch.double)     
-        target = target.to(torch.double)
+        # pred = pred.to(torch.double)     
+        # target = target.to(torch.double)
         
         mse_loss = self.mse_loss(pred, target)
 
@@ -140,7 +136,6 @@ class PLCModel(pl.LightningModule):
     def validation_step(self, val_batch, batch_idx):
         ar_past, nn_past, target = val_batch
 
-        context = ar_past
         f_0 = nn_past[:, :, 0:1, :]
         nn_input = nn_past[:, :, 1:, :]                                                      # torch.Size([20, 2, 480, 7]) 
         nn_pred = self(nn_input)                                                             # torch.Size([20, 2, 480, 7])
@@ -158,11 +153,11 @@ class PLCModel(pl.LightningModule):
 
         ar_pred = torch.tensor(np.array(ar_pred))
 
-        nn_pred = nn_pred[:, 7 * self.p_size:]
-        ar_pred = ar_pred[:, 7 * self.p_size:]
-        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')  # 640
+        # nn_pred = nn_pred[:, 7 * self.p_size:]
+        # ar_pred = ar_pred[:, 7 * self.p_size:]
+        pred = nn_pred.to('cuda:0') + ar_pred.to('cuda:0')  # 2880
 
-        pred = torch.cat((context, pred), dim=1)
+        # pred = torch.cat((context, pred), dim=1)
 
         val_loss = metr.nmse(y_pred=pred, y_true=target)    # 2880
         packet_val_loss = metr.nmse(y_pred=pred[..., -(self.p_size + self.fadeout + self.padding):], y_true=target[..., -(self.p_size + self.fadeout + self.padding):])   # last 640
