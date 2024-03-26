@@ -58,9 +58,12 @@ class TrainDataset(Dataset):
         self.signal_packets = CONFIG.DATA.TRAIN.signal_packets
         self.fadeout = CONFIG.DATA.TRAIN.fadeout
         self.padding = CONFIG.DATA.TRAIN.padding
-        self.audio_index = torch.randint(0, CONFIG.DATA.audio_chunk_len - self.p_size*17, (1,))[0]
+            
         self.previous_predictions = None
-        self.current_epoch = 0
+        # self.current_epoch = 0
+        self.audio_index = torch.randint(0, CONFIG.DATA.audio_chunk_len - self.p_size*17, (1,))[0]
+        self.epochs_for_signal = 20  # 20
+        self.packets_for_signal = 2
         np.random.seed(0)
         torch.manual_seed(0)
         
