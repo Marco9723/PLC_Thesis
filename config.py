@@ -4,7 +4,7 @@ class CONFIG:
     class TRAIN:
         batch_size = 20  # number of audio files per batch
         lr = 1e-4  # learning rate
-        epochs = 150  # training epochs   
+        epochs = 600  # training epochs   
         workers = 8  # number of dataloader workers
         val_split = 0.1  # validation set percentage
         clipping_val = 1.0  # gradient clipping value
@@ -19,7 +19,7 @@ class CONFIG:
         pred_layers = 1  # number of LSTM layers in the predictor
         num_valid_nn_packets = 7 
         gradient_clip = 2.0
-        max_epochs = 150
+        # max_epochs = 150
         xfade_len_in = 16
         
     class AR_MODEL:
