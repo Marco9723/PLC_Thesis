@@ -54,6 +54,5 @@ class CONFIG:
     class LOG:
         log_dir = 'lightning_logs'
         sample_path = 'audio_samples' 
-        log_dir = 'lightning_logs'
 
 
