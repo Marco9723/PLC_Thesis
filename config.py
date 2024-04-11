@@ -4,7 +4,7 @@ class CONFIG:
     class TRAIN:
         batch_size = 20  # number of audio files per batch
         lr = 1e-4  # learning rate
-        epochs = 600  # training epochs   
+        epochs = 250  # training epochs   
         workers = 8  # number of dataloader workers
         val_split = 0.1  # validation set percentage
         clipping_val = 1.0  # gradient clipping value
@@ -23,7 +23,7 @@ class CONFIG:
         xfade_len_in = 16
         
     class AR_MODEL:
-        ar_order = 128
+        ar_order = 50
         diagonal_load = 0.001
         num_valid_ar_packets = 7  
 
