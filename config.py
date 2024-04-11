@@ -23,7 +23,7 @@ class CONFIG:
         xfade_len_in = 16
         
     class AR_MODEL:
-        ar_order = 50
+        ar_order = 128
         diagonal_load = 0.001
         num_valid_ar_packets = 7  
 
