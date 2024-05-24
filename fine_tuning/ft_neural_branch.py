@@ -49,9 +49,9 @@ class FinePLCModel(pl.LightningModule):
         return output
 
     def on_train_epoch_start(self):
-        if self.current_epoch == 0:
-            self.val_dataset.previous_predictions = None
-        self.train_dataset.current_epoch = self.current_epoch
+            if self.current_epoch == 0:
+        self.val_dataset.previous_predictions = None
+        self.train_dataset.previous_predictions = None
         
     def training_step(self, batch, batch_idx):
         ar_past, nn_past, target = batch
