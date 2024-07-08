@@ -3,7 +3,6 @@ import scipy.signal
 import scipy.linalg
 from numba import njit
 import warnings
-
     
 @njit
 def apply_prediction_filter(past: np.ndarray, coeff: np.ndarray, steps: int) -> np.ndarray:
