@@ -4,20 +4,15 @@ import sys
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
-
-sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
-sys.path.append("C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI")
 from CODE import metr
 from CODE.config import CONFIG
 from CODE.blocks import Encoder, Predictor
 from CODE.ar_branch import ARModel
-from CODE.parcnet_loss import SpectralConvergenceLoss, SingleResolutionSTFTLoss, LogMagnitudeSTFTLoss, _spectrogram, \
-    MultiResolutionSTFTLoss
-
+from CODE.parcnet_loss import MultiResolutionSTFTLoss
 
 class PLCModel(pl.LightningModule):
     def __init__(self, train_dataset=None, val_dataset=None, window_size=960, enc_layers=4, enc_in_dim=384, enc_dim=768,
-                 pred_dim=512, pred_layers=1, pred_ckpt_path=None):
+                 pred_dim=512, pred_layers=1):
         super(PLCModel, self).__init__()
         self.window_size = window_size
         self.hop_size = window_size // 2
@@ -26,15 +21,12 @@ class PLCModel(pl.LightningModule):
         self.num_epochs = CONFIG.TRAIN.epochs
         self.ar_order = CONFIG.AR_MODEL.ar_order
         self.diagonal_load = CONFIG.AR_MODEL.diagonal_load
-
         self.ar_model = ARModel(self.ar_order, self.diagonal_load)
         self.p_size = CONFIG.DATA.TRAIN.packet_size
         self.fadeout = CONFIG.DATA.TRAIN.fadeout
         self.padding = CONFIG.DATA.TRAIN.padding
-
         self.val_predictions = []
         self.train_predictions = []
-
         self.enc_layers = enc_layers
         self.enc_in_dim = enc_in_dim
         self.enc_dim = enc_dim
@@ -43,7 +35,6 @@ class PLCModel(pl.LightningModule):
         self.train_dataset = train_dataset
         self.val_dataset = val_dataset
         self.lmbda = 100.0
-
         self.epsilon = 0.0
 
         self.predictor = Predictor(window_size=self.window_size, lstm_dim=self.pred_dim,
@@ -59,7 +50,7 @@ class PLCModel(pl.LightningModule):
         self.encoder = Encoder(in_dim=self.window_size, dim=self.enc_in_dim, depth=self.enc_layers,
                                mlp_dim=self.enc_dim)
 
-        self.window = torch.sqrt(torch.hann_window(self.window_size)) #.to('cuda:0') #<----------
+        self.window = torch.sqrt(torch.hann_window(self.window_size))  #.to('cuda:0')
         self.save_hyperparameters('window_size', 'enc_layers', 'enc_in_dim', 'enc_dim', 'pred_dim', 'pred_layers')
         self.mse_loss = F.mse_loss
         self.stft_loss = MultiResolutionSTFTLoss()
@@ -108,9 +99,9 @@ class PLCModel(pl.LightningModule):
         nn_pred = torch.istft(nn_pred, self.window_size, self.hop_size, window=self.window)
 
         ar_pred = []
-        ar_past = ar_past.cpu().numpy()  # float32
+        ar_past = ar_past.cpu().numpy()
 
-        for i in range(len(target)):  # 20  # 32 se batch size = 32
+        for i in range(len(target)):
             prediction = self.ar_model.predict(ar_past[i], (self.p_size + self.fadeout + self.padding)).astype(np.float32)
             tmp = np.concatenate((ar_past[i], prediction), axis=None)
             ar_pred.append(tmp)
@@ -120,9 +111,9 @@ class PLCModel(pl.LightningModule):
         pred = ar_pred.to('cuda:0') + nn_pred.to('cuda:0')
 
         if use_teacher_forcing:
-            output = pred[:, 7 * self.p_size: 8 * self.p_size]   # TESI: cambiare context non ha dato risultati significativi
+            output = pred[:, 7 * self.p_size: 8 * self.p_size]
         else:
-            output = target[:, 7 * self.p_size: 8 * self.p_size]   # si può non fare?
+            output = target[:, 7 * self.p_size: 8 * self.p_size]
 
         self.train_predictions.append(output)
 
@@ -161,17 +152,17 @@ class PLCModel(pl.LightningModule):
         use_teacher_forcing = torch.rand(1) < self.epsilon
 
         f_0 = nn_past[:, :, 0:1, :]
-        nn_input = nn_past[:, :, 1:, :]  # torch.Size([20, 2, 480, 7])
+        nn_input = nn_past[:, :, 1:, :]
         nn_pred = self(nn_input)
-        nn_pred = torch.cat([f_0, nn_pred], dim=2)  # torch.Size([20, 2, 481, 7])
+        nn_pred = torch.cat([f_0, nn_pred], dim=2)
         nn_pred = torch.view_as_complex(nn_pred.permute(0, 2, 3, 1).contiguous())
-        nn_pred = torch.istft(nn_pred, self.window_size, self.hop_size, window=self.window)  # torch.Size([20, 2880])
+        nn_pred = torch.istft(nn_pred, self.window_size, self.hop_size, window=self.window)
 
         ar_pred = []
         ar_past = ar_past.cpu().numpy()
 
         for i in range(len(target)):
-            prediction = self.ar_model.predict(ar_past[i], (self.p_size + self.fadeout + self.padding)).astype(np.float32)  # 2240 + 640
+            prediction = self.ar_model.predict(ar_past[i], (self.p_size + self.fadeout + self.padding)).astype(np.float32)
             tmp = np.concatenate((ar_past[i], prediction), axis=None)
             ar_pred.append(tmp)
 
@@ -179,13 +170,13 @@ class PLCModel(pl.LightningModule):
         pred = ar_pred.to('cuda:0') + nn_pred.to('cuda:0')
 
         if use_teacher_forcing:
-            output = pred[:, 7 * self.p_size: 8 * self.p_size]   # DA MODIFICARE SE CAMBI CONTEXT!!
+            output = pred[:, 7 * self.p_size: 8 * self.p_size]
         else:
             output = target[:, 7 * self.p_size: 8 * self.p_size]
 
         self.val_predictions.append(output)
 
-        val_loss = metr.nmse(y_pred=pred, y_true=target)  # 2880
+        val_loss = metr.nmse(y_pred=pred, y_true=target)  
         packet_val_loss = metr.nmse(y_pred=pred[..., -(self.p_size + self.fadeout + self.padding):],
                                     y_true=target[..., -(self.p_size + self.fadeout + self.padding):])
 
@@ -222,15 +213,12 @@ class PLCModel(pl.LightningModule):
         scheduler = {
             'scheduler': lr_scheduler,
             'reduce_on_plateau': True,
-            'monitor': 'val_loss'  # val loss
-            # 'monitor': ['val_loss', 'packet_val_loss']
+            'monitor': 'val_loss'
         }
 
         optimizer_config = {
             'optimizer': optimizer,
             'lr_scheduler': scheduler,
-            # 'accumulate_grad_batches': 3  # Imposta il numero di mini-batch da accumulare
         }
 
-        #return [optimizer], [scheduler]
         return [optimizer_config]
