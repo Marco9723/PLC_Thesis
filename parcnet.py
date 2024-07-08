@@ -81,9 +81,9 @@ class PARCnet:
                 # nn_context = np.pad(nn_context, (0, self.pred_dim + self.padding))   
                 # nn_context = torch.Tensor(nn_context[None, None, ...])   
 
-                nn_context = torch.tensor(nn_context)  # torch.Size([2880]) come in dataset
+                nn_context = torch.tensor(nn_context)  
                 nn_context = torch.stft(nn_context, 960, 480, window=self.hann, return_complex=False).permute(2, 0, 1).float()
-                nn_context = nn_context.unsqueeze(0)  # aggiungi una dimensione, in teoria giust perchè sono 3 e aggiungo batch size all'inizio
+                nn_context = nn_context.unsqueeze(0)  
 
                 with torch.no_grad():
                     # NN model inference
