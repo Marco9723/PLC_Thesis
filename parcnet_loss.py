@@ -3,7 +3,6 @@ import torch.nn as nn
 from torch import Tensor
 from typing import Tuple
 
-
 def _spectrogram(x: Tensor, fft_size: int, win_size: int, hop_size: int) -> Tensor:
     x_stft = torch.stft(
         input=x,
