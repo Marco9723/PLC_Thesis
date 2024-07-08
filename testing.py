@@ -3,7 +3,6 @@ import librosa
 import numpy as np
 from pathlib import Path
 from new_parcnet import PARCnet
-from utils import simulate_packet_loss
 from config import CONFIG
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality as PESQ
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility as STOI
@@ -13,6 +12,7 @@ import sys
 from speechmos import plcmos
 from PLCmos.plc_mos import PLCMOSEstimator
 import numpy as np
+from utils import simulate_packet_loss
 
 plc_mos = PLCMOSEstimator()
 
