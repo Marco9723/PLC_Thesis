@@ -1,7 +1,6 @@
 import argparse
 import sys
 import os
-sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -15,11 +14,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--version', default=None,
                     help='version to resume')
 parser.add_argument('--mode', default='train',
-                    help='training or testing mode')
+                    help='training mode')
 
 args = parser.parse_args()
 os.environ["CUDA_VISIBLE_DEVICES"] = str(CONFIG.gpus)
-assert args.mode in ['train', 'eval', 'test'], "--mode should be 'train', 'eval' or 'test'"
+assert args.mode in ['train']
 
 def resume(train_dataset, val_dataset, version):
     print("Version", version)
@@ -46,7 +45,7 @@ def train():
                                              num_workers=CONFIG.TRAIN.workers)
 
     checkpoint_callback = ModelCheckpoint(monitor='val_loss', mode='min', verbose=True,
-                                          filename='parcnet-{epoch:02d}-{val_loss:.4f}', save_weights_only=False, save_top_k=15, save_last=True)
+                                          filename='parcnet-{epoch:02d}-{val_loss:.4f}', save_weights_only=False, save_top_k=10, save_last=True)
     gpus = CONFIG.gpus.split(',')
     logger = TensorBoardLoggerExpanded(CONFIG.DATA.sr)
     if args.version is not None:
@@ -65,7 +64,7 @@ def train():
                          gradient_clip_val=CONFIG.TRAIN.clipping_val,
                          devices=len(gpus),
                          max_epochs=CONFIG.TRAIN.epochs,
-                         accelerator='auto', #if len(gpus) > 1 else None,
+                         accelerator='auto',
                          callbacks=[checkpoint_callback]
                          )
 
