@@ -2,7 +2,6 @@ import os
 import librosa
 import numpy as np
 from pathlib import Path
-# from parcnet import PARCnet
 from new_parcnet import PARCnet
 from utils import simulate_packet_loss
 from config import CONFIG
@@ -12,8 +11,6 @@ from utils import LSD
 import torch
 import sys
 from speechmos import plcmos
-sys.path.append("C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI")
-# from CODE.PLCmos.plc_mos import PLCMOSEstimator
 from PLCmos.plc_mos import PLCMOSEstimator
 import numpy as np
 
@@ -23,52 +20,41 @@ def main():
 
     # MIGLIOR FINE TUNING (somma errata), RIFORMATTATO CON FORMAT.PY, AR=NN=7, AR_ORDER=128:
 
-    # model_checkpoint = "/nas/home/mviviani/nas/home/mviviani/tesi/CODE/train_and_fine_tuning/lightning_logs/version_249/checkpoints/parcnet-epoch=184-val_loss=-10.8378.ckpt"
-    model_checkpoint = "/nas/home/mviviani/tesi/CODE/train_and_fine_tuning/lightning_logs/version_267/checkpoints/parcnet-epoch=168-val_loss=-10.6563.ckpt"
+    # model_checkpoint = ".../lightning_logs/version_249/checkpoints/parcnet-epoch=184-val_loss=-10.8378.ckpt"   # AR 128
+    # model_checkpoint = ".../lightning_logs/version_267/checkpoints/parcnet-epoch=168-val_loss=-10.6563.ckpt"   # AR 1024
 
-    # audio_test_folder = Path("C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/data/val_clean_v2")
-    # audio_test_folder = Path("/nas/home/mviviani/tesi/data/val_clean_v2")
-    # audio_test_folder = Path("/nas/home/mviviani/nas/home/mviviani/tesi/data/val_clean_v2")
-    audio_test_folder = Path("/nas/home/mviviani/tesi/audio_less_then_1_5")
-    # audio_test_folder = Path("/nas/home/mviviani/tesi/audio_1_5_2")
-    # audio_test_folder = Path("/nas/home/mviviani/tesi/audio_more_then_2")
-
-    # trace_folder = Path("C:/Users/marco/Documents/GitHub/Packet_Loss_Concealment_Thesis/TESI/data/traces_v2")
-    # trace_folder = Path("/nas/home/mviviani/nas/home/mviviani/tesi/data/traces_v2")
-    # trace_folder = Path("/nas/home/mviviani/tesi/data/traces_v2")
-    trace_folder = Path("/nas/home/mviviani/tesi/folder_less_then_1_5")
-    # trace_folder = Path("/nas/home/mviviani/tesi/folder_1_5_2")
-    # trace_folder = Path("/nas/home/mviviani/tesi/folder_more_then_2")
+    audio_test_folder = Path("path/to/audio/folder")
+    trace_folder = Path("path/to/trace/folder")
 
     # Read global params from config file
-    sr = CONFIG.DATA.sr                        # 48000
-    packet_dim = CONFIG.DATA.EVAL.packet_size  # 320
-    fadeout = CONFIG.DATA.EVAL.fadeout         # 80   
-    padding = CONFIG.DATA.EVAL.padding         # 240
+    sr = CONFIG.DATA.sr                      
+    packet_dim = CONFIG.DATA.EVAL.packet_size 
+    fadeout = CONFIG.DATA.EVAL.fadeout         
+    padding = CONFIG.DATA.EVAL.padding       
 
     # Read AR params from config file
-    ar_order = CONFIG.AR_MODEL.ar_order                           # 128 
-    diagonal_load = CONFIG.AR_MODEL.diagonal_load                 # 0.001
-    num_valid_ar_packets = CONFIG.AR_MODEL.num_valid_ar_packets   # 7
+    ar_order = CONFIG.AR_MODEL.ar_order                          
+    diagonal_load = CONFIG.AR_MODEL.diagonal_load               
+    num_valid_ar_packets = CONFIG.AR_MODEL.num_valid_ar_packets  
 
     # Read NN params from config file
-    num_valid_nn_packets = CONFIG.NN_MODEL.num_valid_nn_packets   # 7
-    xfade_len_in = CONFIG.NN_MODEL.xfade_len_in                   # 16 o 24
+    num_valid_nn_packets = CONFIG.NN_MODEL.num_valid_nn_packets   
+    xfade_len_in = CONFIG.NN_MODEL.xfade_len_in                 
     
     stoi_metric = STOI(48000)
     pesq_metric = PESQ(16000, 'wb')   
 
     # Instantiate PARCnet
     parcnet = PARCnet(
-        packet_dim=packet_dim,                      # 320
-        extra_pred_dim = fadeout,                   # 80
-        padding = padding,                          # 240
-        ar_order=ar_order,                          # 128
-        ar_diagonal_load=diagonal_load,             # 0.001
-        ar_context_dim=num_valid_ar_packets,  # 7
-        nn_context_dim=num_valid_nn_packets,  # 7
+        packet_dim=packet_dim,                    
+        extra_pred_dim = fadeout,                
+        padding = padding,                         
+        ar_order=ar_order,                       
+        ar_diagonal_load=diagonal_load,            
+        ar_context_dim=num_valid_ar_packets,  
+        nn_context_dim=num_valid_nn_packets,
         model_checkpoint=model_checkpoint,
-        nn_fade_dim=xfade_len_in,                  # 16 o 24
+        nn_fade_dim=xfade_len_in,                 
         device='cpu'
     )
 
@@ -82,7 +68,6 @@ def main():
     speechmos_list = []
     index = 0
     
-    # for index, audio_test_path in enumerate(audio_test_folder.glob(audio_format)):
     for audio_test_path in audio_test_folder.glob(audio_format): 
         # if index < 497:
         #     continue
@@ -103,12 +88,12 @@ def main():
         # y_ref = librosa.util.normalize(y_ref)
 
         # Simulate packet losses
-        y_lost = simulate_packet_loss(y_ref, trace, packet_dim)   # packet dim = 320, il + 80 fatto dopo con fadeout (prima era extra_dim)
+        y_lost = simulate_packet_loss(y_ref, trace, packet_dim)  
 
         # Predict using PARCnet
         y_pred = parcnet(y_lost, trace)  # parcnet
-        # y_pred = y_lost  # zero - fill
-        # y_pred = y_ref  # upper bound
+        # y_pred = y_lost                # zero  fill
+        # y_pred = y_ref                 # upper bound
 
         y_pred = torch.tensor(y_pred)
         y_ref = torch.tensor(y_ref)
@@ -162,7 +147,6 @@ def main():
 
 
     intrusive_mean = sum(intrusive_list) / len(intrusive_list) if len(intrusive_list) > 0 else 0
-    # non_intrusive_mean = sum(non_intrusive_list) / len(non_intrusive_list) if len(non_intrusive_list) > 0 else 0
     lsd_mean = sum(lsd_list) / len(lsd_list) if len(lsd_list) > 0 else 0
     stoi_mean = sum(stoi_list) / len(stoi_list) if len(stoi_list) > 0 else 0
     pesq_mean = sum(pesq_list) / len(pesq_list) if len(pesq_list) > 0 else 0
