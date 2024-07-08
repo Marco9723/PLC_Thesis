@@ -5,10 +5,10 @@ from torch import nn
 import torch.nn.functional as F
 import numpy as np
 import metrics
-from CODE.config import CONFIG
-from CODE.blocks import Encoder, Predictor
-from CODE.ar_branch import ARModel
-from CODE.parcnet_loss import MultiResolutionSTFTLoss
+from config import CONFIG
+from blocks import Encoder, Predictor
+from ar_branch import ARModel
+from parcnet_loss import MultiResolutionSTFTLoss
 
 class PLCModel(pl.LightningModule):
     def __init__(self, train_dataset=None, val_dataset=None, window_size=960, enc_layers=4, enc_in_dim=384, enc_dim=768,
