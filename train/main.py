@@ -4,10 +4,10 @@ import os
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
-from dataset_tot import TrainDataset
-from neural_branch_tot import PLCModel
-from CODE.config import CONFIG
-from CODE.tblogger import TensorBoardLoggerExpanded
+from dataset import TrainDataset
+from neural_branch import PLCModel
+from config import CONFIG
+from tblogger import TensorBoardLoggerExpanded
 
 parser = argparse.ArgumentParser()
 
