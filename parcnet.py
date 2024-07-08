@@ -5,54 +5,51 @@ import numpy as np
 from tqdm import tqdm
 from copy import deepcopy
 from ar_branch import ARModel
-from train_and_fine_tuning.neural_branch_tot import PLCModel
-# sys.path.append("/nas/home/mviviani/tesi")
-# from CODE.fine_tuning.ft_neural_branch import FinePLCModel  # <----------
-from CODE.train_and_fine_tuning.neural_branch_tot import PLCModel
-from config import CONFIG                                   # <----------
-import metr
+from train.neural_branch import PLCModel
+from train.neural_branch import PLCModel
+from config import CONFIG                                  
+import metrics
 
 
 class PARCnet:
 
     def __init__(self,
-                 packet_dim: int,      # 320
-                 extra_pred_dim: int,  # 80 fadeout
-                 padding: int,         # 240
-                 ar_order: int,        # 128
-                 ar_diagonal_load: float, #0.001
-                 ar_context_dim: int,   #7
-                 nn_context_dim: int,   #7
-                 nn_fade_dim: int,      # xfade_len_in = 16
+                 packet_dim: int,     
+                 extra_pred_dim: int,  
+                 padding: int,         
+                 ar_order: int,       
+                 ar_diagonal_load: float, 
+                 ar_context_dim: int,  
+                 nn_context_dim: int,   
+                 nn_fade_dim: int,     
                  model_checkpoint: str,
                  device: str = 'cpu',
                  lite: bool = True,
                  ):
 
-        self.packet_dim = packet_dim     # 320
-        self.extra_dim = extra_pred_dim  # 80 per fadeout
-        self.padding = padding           # 240
+        self.packet_dim = packet_dim    
+        self.extra_dim = extra_pred_dim  
+        self.padding = padding           
 
         # Define the prediction length, including the extra length
-        self.pred_dim = packet_dim + extra_pred_dim  # 400
+        self.pred_dim = packet_dim + extra_pred_dim  
 
         # Define the AR and neural network contexts in sample
-        self.ar_context_dim = ar_context_dim * packet_dim     # 7 * 320
-        self.nn_context_dim = nn_context_dim * packet_dim     # 7 * 320
+        self.ar_context_dim = ar_context_dim * packet_dim     
+        self.nn_context_dim = nn_context_dim * packet_dim    
 
         # Define fade-in modulation vector (neural network contribution only)
-        self.nn_fade_dim = nn_fade_dim                  # 16/24
-        self.nn_fade = np.linspace(0, 1, nn_fade_dim)   # 16/24
+        self.nn_fade_dim = nn_fade_dim               
+        self.nn_fade = np.linspace(0, 1, nn_fade_dim)  
 
         # Define fade-in and fade-out modulation vectors
-        self.fade_in = np.linspace(0., 1., extra_pred_dim)  # 80  NON 16? <-----
-        self.fade_out = np.linspace(1., 0., extra_pred_dim) # 80
+        self.fade_in = np.linspace(0., 1., extra_pred_dim)  
+        self.fade_out = np.linspace(1., 0., extra_pred_dim)
 
         # Instantiate the linear predictor
         self.ar_model = ARModel(ar_order, ar_diagonal_load)
 
         # Load the pretrained neural network
-        # -----> self.neural_net = PLCModel.load_from_checkpoint(model_checkpoint, channels=1, lite=lite, packet_dim=packet_dim, extra_pred_dim=extra_pred_dim,).to(device)
         self.neural_net = PLCModel.load_from_checkpoint(model_checkpoint, channels=1, lite=True).to(device)
         self.hann = torch.sqrt(torch.hann_window(960))
 
@@ -74,16 +71,15 @@ class PARCnet:
 
                 # AR model prediction
                 ar_context = output_signal[idx - self.ar_context_dim:idx]
-                # print(len(ar_context))
-                ar_context = np.pad(ar_context, (self.ar_context_dim - len(ar_context), 0))  # 2240, se perde pacchetto troppo presto
+                ar_context = np.pad(ar_context, (self.ar_context_dim - len(ar_context), 0))  
                 ar_pred = self.ar_model.predict(valid=ar_context, steps=self.pred_dim)
                 
                 # NN model context
                 nn_context = output_signal[idx - self.nn_context_dim: idx]
                 # print(len(nn_context))
-                nn_context = np.pad(nn_context, (self.nn_context_dim - len(nn_context), self.pred_dim + self.padding))  # <--- prima per avere 7 di context, dopo per input nn
-                # nn_context = np.pad(nn_context, (0, self.pred_dim + self.padding))   # <----- messo noi, poi paddi con zeri
-                # nn_context = torch.Tensor(nn_context[None, None, ...])    # <-------------- credo si possa togliere
+                nn_context = np.pad(nn_context, (self.nn_context_dim - len(nn_context), self.pred_dim + self.padding)) 
+                # nn_context = np.pad(nn_context, (0, self.pred_dim + self.padding))   
+                # nn_context = torch.Tensor(nn_context[None, None, ...])   
 
                 nn_context = torch.tensor(nn_context)  # torch.Size([2880]) come in dataset
                 nn_context = torch.stft(nn_context, 960, 480, window=self.hann, return_complex=False).permute(2, 0, 1).float()
@@ -93,23 +89,20 @@ class PARCnet:
                     # NN model inference
                     f_0 = nn_context[:, :, 0:1, :]
                     nn_input = nn_context[:, :, 1:, :]
-                    nn_pred = self.neural_net(nn_input)   # <---------------- ORIGINALE: nn_pred = self.neural_net(nn_context)
-                    nn_pred = torch.cat([f_0, nn_pred], dim=2)  # torch.Size([20, 2, 481, 7])
+                    nn_pred = self.neural_net(nn_input)   
+                    nn_pred = torch.cat([f_0, nn_pred], dim=2)  
                     nn_pred = torch.view_as_complex(nn_pred.permute(0, 2, 3, 1).contiguous())
                     nn_pred = torch.istft(nn_pred, 960, 480,
-                                          window=self.hann)  # 2240 + 320 + 320 = 2880   torch.Size([1, 2880])
-                    # print(len(nn_pred))
-                    nn_pred = nn_pred[..., -(self.pred_dim + self.padding):]  # prendi ultimi 320 + 320
-                    nn_pred = nn_pred[..., :self.pred_dim]  # primi 400 (320 + 80)   torch.Size([1, 400])  # <---------------- ORIGINALE
-                    nn_pred = nn_pred.squeeze().cpu().numpy()  # [400]    # <---------------- ORIGINALE
+                                          window=self.hann)  
+                    nn_pred = nn_pred[..., -(self.pred_dim + self.padding):]  
+                    nn_pred = nn_pred[..., :self.pred_dim]  # primi 400 (320 + 80)   
+                    nn_pred = nn_pred.squeeze().cpu().numpy()  # [400]   
 
                 # Apply fade-in to the neural network contribution (inbound fade-in)
                 nn_pred[:self.nn_fade_dim] *= self.nn_fade
 
                 # Combine the two predictions
                 prediction = ar_pred + nn_pred
-                # print(len(prediction))
-                # prediction = np.clip(prediction, -1e15, 1e15)
 
                 # Cross-fade the compound prediction (outbound fade-out)
                 prediction[-self.extra_dim:] *= self.fade_out
