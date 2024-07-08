@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from copy import deepcopy
-sys.path.append("/nas/home/mviviani/nas/home/mviviani/tesi")
-# from CODE.config import CONFIG    #  + CANCELLARE FUNZIONI MAI UTILIZZATE !!!
 from config import CONFIG
 
 def mkdir_p(mypath):
