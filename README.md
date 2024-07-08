@@ -77,7 +77,9 @@ $ cd PLC_Thesis
 ## Training
 
 * Adjust training hyperparameters in `config.py`.
-* 
+
+* Modify paths where needed. If necessary, recheck the imports if they cause problems.
+
 * The train folder contains the main files of the autoregressive training with teacher forcing.
 
 * Run `main.py`:
@@ -90,30 +92,32 @@ $ cd PLC_Thesis
     $ python main.py --mode train --version 0
     ```
 
-## Evaluation  (ancora da scrivere)
+## Evaluation  
 
-In our paper, we evaluated with 2 masking methods: simulation using Markov Chain and employing real traces in PLC
-Challenge.
-
-* Get the blind test set with loss traces:
-    ```
-    $ wget http://plcchallenge2022pub.blob.core.windows.net/plcchallengearchive/blind.tar.gz
-    $ tar -xvf blind.tar.gz -C test_samples
-    ```
+* Get your evaluation set and modify paths where needed. If necessary, recheck the imports if they cause problems.
+  
 * Modify `config.py` to change evaluation setup if necessary.
-* Run `main.py` with a version number to be evaluated:
+  
+* Run `testing.py`:
     ```
-    $ python main.py --mode eval --version 0
+    $ python testing.py 
     ```
-  During the evaluation, several output samples are saved to `CONFIG.LOG.sample_path` for sanity testing.
+    
+* To reconstruct a lossy file run "reconstruct.py"
+    ```
+    $ python reconstruct.py 
+    ```
 
-## Configure a new dataset   (ancora da scrivere)
+* You will probably need to modify `CONFIG.TEST.in_dir` to your input directory.
+  
 
-Our implementation currently works with the VCTK dataset but can be easily extensible to a new one.
+## Configure a new dataset   
 
-* Firstly, you need to prepare `train.txt` and `test.txt`. See `./data/vctk/train.txt` and `./data/vctk/test.txt` for
-  example.
-* Secondly, add a new dictionary to `CONFIG.DATA.data_dir`:
+The implementation can be easily extended to a new one.
+
+* Prepare `train.txt` and `test.txt`. See `./data/vctk/train.txt` and `./data/vctk/test.txt` for example.
+
+* Add a new dictionary to `CONFIG.DATA.data_dir`:
     ```
     {
     'root': 'path/to/data/directory',
@@ -124,9 +128,6 @@ Our implementation currently works with the VCTK dataset but can be easily exten
   **Important:** Make sure each line in `train.txt` and `test.txt` joining with `'root'` is a valid path to its
   corresponding audio file.
 
-# 5. Audio generation
 
-* In order to generate output audios, you need to modify `CONFIG.TEST.in_dir` to your input directory.
-* Run `... .py`:
 
 
