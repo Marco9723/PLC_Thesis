@@ -4,7 +4,7 @@ import sys
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
-from CODE import metr
+import metrics
 from CODE.config import CONFIG
 from CODE.blocks import Encoder, Predictor
 from CODE.ar_branch import ARModel
