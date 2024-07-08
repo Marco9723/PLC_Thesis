@@ -2,7 +2,7 @@ import os
 import librosa
 import numpy as np
 from pathlib import Path
-from new_parcnet import PARCnet
+from parcnet import PARCnet
 from config import CONFIG
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality as PESQ
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility as STOI
@@ -18,10 +18,10 @@ plc_mos = PLCMOSEstimator()
 
 def main():
 
-    # MIGLIOR FINE TUNING (somma errata), RIFORMATTATO CON FORMAT.PY, AR=NN=7, AR_ORDER=128:
-
-    # model_checkpoint = ".../lightning_logs/version_249/checkpoints/parcnet-epoch=184-val_loss=-10.8378.ckpt"   # AR 128
-    # model_checkpoint = ".../lightning_logs/version_267/checkpoints/parcnet-epoch=168-val_loss=-10.6563.ckpt"   # AR 1024
+    # model_checkpoint = ".../parcnet-epoch=184-val_loss=-10.8378.ckpt"    # AR 128
+    # model_checkpoint = ".../parcnet-epoch=120-val_loss=-10.3744.ckpt"    # AR 256
+    # model_checkpoint = ".../parcnet-epoch=168-val_loss=-10.5687.ckpt"    # AR 512
+    # model_checkpoint = ".../parcnet-epoch=168-val_loss=-10.6563.ckpt"    # AR 1024
 
     audio_test_folder = Path("path/to/audio/folder")
     trace_folder = Path("path/to/trace/folder")
