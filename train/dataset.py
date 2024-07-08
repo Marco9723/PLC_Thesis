@@ -7,7 +7,7 @@ import torch
 from numpy.random import default_rng
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
-from CODE.config import CONFIG
+from config import CONFIG
 
 np.random.seed(0)
 rng = default_rng()
