@@ -1,16 +1,13 @@
 from os import path
-
 import librosa as rosa
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.utilities import rank_zero_only
-
-from CODE.stft import STFTMag
+from stft import STFTMag
 
 matplotlib.use('Agg')
-
 
 class TensorBoardLoggerExpanded(TensorBoardLogger):
     def __init__(self, sr=16000):
