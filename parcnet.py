@@ -7,8 +7,8 @@ from copy import deepcopy
 from ar_branch import ARModel
 from train.neural_branch import PLCModel
 from train.neural_branch import PLCModel
+from metrics import _melspectrogram, mel_spectral_convergence, nmse
 from config import CONFIG                                  
-import metrics
 
 
 class PARCnet:
