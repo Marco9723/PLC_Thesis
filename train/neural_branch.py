@@ -47,7 +47,7 @@ class PLCModel(pl.LightningModule):
             nn.Conv2d(48, 2, kernel_size=1, stride=1, padding=0, groups=2),
         )
 
-        self.encoder = Encoder(in_dim=self.window_size, dim=self.enc_in_dim, depth=self.enc_layers,
+        self.enr = Enr(in_dim=self.window_size, dim=self.enc_in_dim, depth=self.enc_layers,
                                mlp_dim=self.enc_dim)
 
         self.window = torch.sqrt(torch.hann_window(self.window_size))  #.to('cuda:0')
@@ -67,10 +67,10 @@ class PLCModel(pl.LightningModule):
         x = x.permute(3, 0, 1, 2).unsqueeze(-1)
         prev_mag = torch.zeros((B, 1, F, 1), device=x.device)
         predictor_state = torch.zeros((2, self.predictor.lstm_layers, B, self.predictor.lstm_dim), device=x.device)
-        mlp_state = torch.zeros((self.encoder.depth, 2, 1, B, self.encoder.dim), device=x.device)
+        mlp_state = torch.zeros((self.enr.depth, 2, 1, B, self.enr.dim), device=x.device)
         result = []
         for step in x:
-            feat, mlp_state = self.encoder(step, mlp_state)
+            feat, mlp_state = self.enr(step, mlp_state)
             prev_mag, predictor_state = self.predictor(prev_mag, predictor_state)
             feat = torch.cat((feat, prev_mag), 1)
             feat = self.joiner(feat)
