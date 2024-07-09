@@ -77,7 +77,7 @@ class TrainDataset(Dataset):
         while sig.shape[1] < self.window:
             idx = index
             pad_len = self.window - sig.shape[1]
-            if pad_len < 0.02 * self.sr:  # RICONTROLLA
+            if pad_len < 0.02 * self.sr:  
                 padding = np.zeros((1, pad_len), dtype=float)
             else:
                 padding = load_audio(self.data_list[idx], sample_rate=self.sr, chunk_len=pad_len)
@@ -92,7 +92,7 @@ class TrainDataset(Dataset):
             sig = sig.reshape(-1).astype(np.float32)
             sig = sig[self.audio_index:]
             sig = sig[:int((self.signal_packets * self.p_size) + self.fadeout + self.padding)].copy()  # 7 packets of context + 1 to predict + 1 padding  (2880 samples)
-            target = torch.tensor(np.array(sig.copy())).float()  # clean target
+            target = torch.tensor(np.array(sig.copy())).float()  
 
             # Fetch nn and ar inputs
             nn_input = torch.tensor(np.array(sig[:int(self.p_size * self.context_length)].copy()))  # 7 packets (2240 samples)
@@ -107,10 +107,10 @@ class TrainDataset(Dataset):
             sig = sig.reshape(-1).astype(np.float32)
             sig = sig[self.audio_index:]
             pred_length = len(self.previous_predictions[index, :])
-            sig = sig[int(pred_length):int(pred_length + (self.signal_packets * self.p_size) + self.fadeout + self.padding)].copy()
+            sig = sig[int(pred_length):int(pred_length + (self.signal_packets * self.p_size) + self.fadeout + self.padding)].copy()  # 320 samples shift
             target = torch.tensor(np.array(sig.copy())).float()  # target clean
             sig = sig[:-(int(self.p_size + (self.fadeout + self.padding)))]  # 7 packets
-            sig[-pred_length:] = self.previous_predictions[index, :]
+            sig[-pred_length:] = self.previous_predictions[index, :] # update with previous prediction
 
             # Fetch nn and ar inputs
             nn_input = torch.tensor(np.array(sig.copy()))  # 7 packets
