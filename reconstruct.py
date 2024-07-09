@@ -2,17 +2,17 @@ import os
 import librosa
 import numpy as np
 import soundfile as sf
+import torch
+import sys
+import numpy as np
 from pathlib import Path
 from parcnet import PARCnet
-import simulate_packet_loss
+from utils import simulate_packet_loss
 from config import CONFIG
 from torchmetrics.audio.pesq import PerceptualEvaluationSpeechQuality as PESQ
 from torchmetrics.audio.stoi import ShortTimeObjectiveIntelligibility as STOI
-import torch
-import sys
 from PLCmos.plc_mos import PLCMOSEstimator
-import numpy as np
-import LSD
+from utils import LSD
 from speechmos import plcmos
 
 plc_mos = PLCMOSEstimator()
