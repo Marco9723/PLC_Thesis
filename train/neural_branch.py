@@ -4,7 +4,7 @@ import sys
 from torch import nn
 import torch.nn.functional as F
 import numpy as np
-import metrics
+from metrics import _melspectrogram, mel_spectral_convergence, nmse
 from config import CONFIG
 from blocks import Encoder, Predictor
 from ar_branch import ARModel
