@@ -31,13 +31,13 @@ $ cd PLC_Thesis
 
 # 3. Data preparation
 
-* Download and extract the datasets. In our paper, we conduct experiments on the [VCTK](https://datashare.ed.ac.uk/handle/10283/3443) dataset.
+* Download and extract the dataset. In our paper, we used the [VCTK](https://datashare.ed.ac.uk/handle/10283/3443) dataset.
     ```
     $ wget http://www.udialogue.org/download/VCTK-Corpus.tar.gz -O data/vctk/VCTK-Corpus.tar.gz
     $ tar -zxvf data/vctk/VCTK-Corpus.tar.gz -C data/vctk/ --strip-components=1
     ```
 
-  After extracting the datasets, `./data` directory should look like this:
+  After that, the `./data` directory should be organized as follows:
 
     ```
     .
@@ -50,8 +50,8 @@ $ cd PLC_Thesis
             |--train.txt   
             |--test.txt
     ```
-* In order to load the datasets, text files that contain training and testing audio paths are required. We have
-  prepared `train.txt` and `test.txt` files in `./data/vctk` directory.
+* To load the dataset, you need text files that list the audio paths for training and testing.
+  We have prepared train.txt and test.txt files in the ./data/vctk directory.
 
 * In `./data` it is recommended to also save the files and traces of the testing set: 
 
