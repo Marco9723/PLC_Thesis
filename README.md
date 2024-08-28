@@ -19,10 +19,6 @@ $ cd PLC_Thesis
 
 ### Create environment and install requirements
 
-* Install `libsndfile` libraries for the Python packages `soundfile`
-    ```
-    $ apt-get update && apt-get install libsndfile-dev
-    ```
 * Create a Python 3.9 environment with Conda:
    ```
    $ conda create -n frn python=3.9
