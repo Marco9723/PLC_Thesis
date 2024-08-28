@@ -94,12 +94,12 @@ $ cd PLC_Thesis
   
 * Modify `config.py` to change evaluation setup if necessary.
   
-* Run `testing.py`:
+* Run `testing.py`, preferably on GPU. This script calculates metrics for all audio files and averages them:
     ```
     $ python testing.py 
     ```
     
-* To reconstruct a lossy file run "reconstruct.py"
+* To reconstruct a lossy file run "reconstruct.py". This script returns the reconstructed output for a single lossy audio file.
     ```
     $ python reconstruct.py 
     ```
@@ -111,9 +111,9 @@ $ cd PLC_Thesis
 
 The implementation can be easily extended to a new one.
 
-* Prepare `train.txt` and `test.txt`. See `./data/vctk/train.txt` and `./data/vctk/test.txt` for example.
+* Prepare the new versions of `train.txt` and `test.txt`. 
 
-* Add a new dictionary to `CONFIG.DATA.data_dir`:
+* Modify the dictionary in `CONFIG.DATA.data_dir`:
     ```
     {
     'root': 'path/to/data/directory',
@@ -121,8 +121,7 @@ The implementation can be easily extended to a new one.
     'test': 'path/to/test.txt'
     }
     ```
-  **Important:** Make sure each line in `train.txt` and `test.txt` joining with `'root'` is a valid path to its
-  corresponding audio file.
+* Ensure that each line in train.txt and test.txt, when combined with 'root', forms a valid path to the corresponding audio file.
 
 
 
